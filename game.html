@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>心理学迷路</title>
+<title>OFT迷宮</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -259,15 +259,15 @@
 <body>
 <div class="stage">
   <div class="title">
-    <h1>心理学迷路</h1>
-    <p>出口はない。ランタンの灯りだけを頼りに、1分間迷路の中で生き延びろ。</p>
+    <h1>OFT迷宮</h1>
+    <p>限られた資源とHPの中で、1分間エサ場という名の迷路の中で生き延びろ。</p>
   </div>
 
   <div class="hud">
     <div class="stamina-block">
       <div class="stamina-top">
-        <div class="hud-label">体力</div>
-        <span class="stun-indicator" id="stunIndicator">満腹中…動けない</span>
+        <div class="hud-label">スタミナ</div>
+        <span class="stun-indicator" id="stunIndicator">食事中…動けない</span>
         <div class="hud-value" id="staminaVal">100</div>
       </div>
       <div class="stamina-track">
@@ -289,21 +289,21 @@
   <div class="board-wrap">
     <canvas id="board"></canvas>
     <div class="overlay show" id="titleScreen">
-      <h2>心理学迷路</h2>
-      <p>出口はない。ランタンの灯りだけを頼りに、1分間迷路の中で生き延びろ。エサを食べると体力が回復する。Enterキー（またはボタン）でいつでもフィールドを切り替えられるが、切り替え時はダメージを受ける。</p>
+      <h2>OFT迷宮</h2>
+      <p>限られた資源とHPの中で、1分間エサ場という名の迷路の中で生き延びろ。エサを食べると体力が回復する。Enterキー（またはボタン）でいつでもフィールドを切り替えられるが、切り替え時はダメージを受ける。</p>
       <input type="text" class="name-input" id="playerNameInput" placeholder="プレイヤー名（任意）" maxlength="12">
       <div class="mode-select">
         <button class="mode-btn active" data-mode="static" id="modeStaticBtn">
           静止時は消耗しない
-          <span class="mode-sub">体力は移動したときだけ減る</span>
+          <span class="mode-sub">スタミナは移動したときだけ減る</span>
         </button>
         <button class="mode-btn" data-mode="drain" id="modeDrainBtn">
           静止時も消耗する
-          <span class="mode-sub">立ち止まっていても50/60秒のペースで減る</span>
+          <span class="mode-sub">立ち止まっていても約1秒に1のペースでスタミナを消耗する</span>
         </button>
         <button class="mode-btn" data-mode="freeze" id="modeFreezeBtn">
-          食事中停止する
-          <span class="mode-sub">餌を食べると30フレーム動けなくなる。この間も体力は減り続ける</span>
+          食事中は停止する
+          <span class="mode-sub">餌を食べると0.5秒動けなくなる。この間も体力は減り続ける</span>
         </button>
       </div>
       <button class="btn" id="startBtn">スタート</button>
@@ -331,7 +331,7 @@
 
   <div class="legend">
     <span><span class="dot" style="background:var(--amber)"></span>あなた</span>
-    <span><span class="dot" style="background:var(--moss)"></span>餌（体力回復）</span>
+    <span><span class="dot" style="background:var(--moss)"></span>エサ</span>
     <span><span class="sq" style="background:var(--wall-lit)"></span>壁</span>
   </div>
 
@@ -684,7 +684,7 @@ async function exportCsv(){
     if(won){
       overlayTitleEl.textContent = '生存成功';
       overlayTitleEl.className = 'win';
-      overlayTextEl.textContent = '1分間、闇の迷路で生き延びた。捕食した餌: ' + foodEaten + '匹。';
+      overlayTextEl.textContent = '1分間生き延びた。捕食した餌: ' + foodEaten + '匹。';
     } else {
       overlayTitleEl.textContent = '力尽きた';
       overlayTitleEl.className = 'lose';
