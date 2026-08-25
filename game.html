@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>心理学迷路</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0b0d14;
+    --panel:#11141d;
+    --floor-dim:#171b26;
+    --floor-lit:#232a3d;
+    --wall-dim:#333c54;
+    --wall-lit:#5b6a94;
+    --wall-hi:#8593bb;
+    --wall-lo:#232838;
+    --amber:#f2b155;
+    --moss:#8fd19e;
+    --cream:#eae6da;
+    --cream-dim:#8b8a92;
+    --danger:#e0665a;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:var(--void);
+    color:var(--cream);
+    font-family:'Space Grotesk',sans-serif;
+    display:flex; align-items:flex-start; justify-content:center;
+    overflow-x:hidden;
+  }
+  .stage{
+    width:100%;
+    max-width:520px;
+    padding:20px 16px 32px;
+    display:flex; flex-direction:column; align-items:center;
+    gap:12px;
+  }
+  .title{ text-align:center; }
+  .title h1{
+    margin:0; font-size:22px; font-weight:700;
+    letter-spacing:0.04em; color:var(--cream);
+  }
+  .title p{
+    margin:4px 0 0; font-size:12px;
+    color:var(--cream-dim); letter-spacing:0.02em;
+  }
+  .hud{
+    width:100%; display:flex; flex-direction:column; gap:10px;
+  }
+  .hud-row{
+    display:flex; gap:10px; justify-content:space-between; align-items:stretch;
+  }
+  .hud-block{
+    flex:1; background:var(--panel);
+    border:1px solid #1f2433; border-radius:10px; padding:8px 12px;
+  }
+  .hud-label{
+    font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--cream-dim); margin-bottom:4px;
+  }
+  .hud-value{
+    font-family:'JetBrains Mono',monospace; font-size:18px;
+    font-weight:600; color:var(--amber);
+  }
+  .hud-value.danger{ color:var(--danger); }
+  .stamina-block{
+    width:100%; background:var(--panel);
+    border:1px solid #1f2433; border-radius:12px; padding:10px 14px;
+  }
+  .stamina-top{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:8px;
+  }
+  .stamina-top .hud-label{ margin-bottom:0; font-size:11px; }
+  .stun-indicator{
+    font-size:10px; font-weight:700; color:var(--danger);
+    letter-spacing:0.04em; display:none;
+  }
+  .stun-indicator.show{ display:inline; }
+  .stamina-track{
+    position:relative;
+    height:28px; border-radius:14px;
+    background:#0d0f16;
+    border:1px solid rgba(255,255,255,0.06);
+    box-shadow:inset 0 2px 5px rgba(0,0,0,0.5);
+    overflow:hidden;
+  }
+  .stamina-fill{
+    height:100%; width:20%;
+    background:linear-gradient(90deg,#8fd19e,#f2b155);
+    box-shadow:0 0 12px rgba(242,177,85,0.55);
+    transition:width 0.25s ease, background 0.25s ease;
+  }
+  .stamina-fill.danger{
+    background:linear-gradient(90deg,#e0665a,#c94a3f);
+    box-shadow:0 0 14px rgba(224,102,90,0.7);
+    animation:pulse-danger 0.9s ease-in-out infinite;
+  }
+  .stamina-fill.overflow{
+    background:linear-gradient(90deg,#f2b155,#ffe29a);
+    box-shadow:0 0 16px rgba(255,226,154,0.85);
+    animation:pulse-overflow 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse-overflow{
+    0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.25); }
+  }
+  .stamina-text{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700;
+    color:#0b0d14; text-shadow:0 1px 2px rgba(255,255,255,0.25);
+    letter-spacing:0.03em;
+  }
+  @keyframes pulse-danger{
+    0%,100%{ opacity:1; } 50%{ opacity:0.75; }
+  }
+  .field-change-btn{
+    width:100%;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-family:'Space Grotesk',sans-serif; font-size:12.5px; font-weight:600;
+    color:var(--cream);
+    background:var(--panel);
+    border:1.5px solid var(--amber);
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    animation:glow-pulse 1.8s ease-in-out infinite;
+  }
+  .field-change-btn:active{ transform:scale(0.98); }
+  .field-change-btn .key-cap{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+    background:var(--amber); color:#1a1204;
+    border-radius:5px; padding:3px 7px;
+    letter-spacing:0.02em;
+  }
+  @keyframes glow-pulse{
+    0%,100%{ box-shadow:0 0 0 rgba(242,177,85,0); }
+    50%{ box-shadow:0 0 12px rgba(242,177,85,0.55); }
+  }
+  .board-wrap{
+    position:relative; width:100%; border-radius:12px;
+    background:#05060a; padding:6px;
+    box-shadow:0 0 0 1px #1f2433, 0 20px 40px -20px rgba(0,0,0,0.8);
+  }
+  canvas{ display:block; width:100%; height:auto; border-radius:8px; }
+  .overlay{
+    position:absolute; inset:6px; border-radius:8px;
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; background:rgba(6,7,10,0.94); text-align:center; padding:18px;
+    overflow-y:auto;
+  }
+  .overlay.show{ display:flex; }
+  .overlay h2{ margin:0; font-size:20px; letter-spacing:0.03em; }
+  .overlay h2.win{ color:var(--moss); }
+  .overlay h2.lose{ color:var(--danger); }
+  .overlay p{
+    margin:0; font-size:13px; color:var(--cream-dim);
+    max-width:320px; line-height:1.6;
+  }
+  .result-stats{
+    display:grid; grid-template-columns:1fr 1fr; gap:8px;
+    width:100%; max-width:320px;
+  }
+  .result-stats .stat{
+    background:var(--panel); border:1px solid #1f2433; border-radius:8px;
+    padding:8px 10px; text-align:left;
+  }
+  .result-stats .stat .k{
+    font-size:10px; color:var(--cream-dim); letter-spacing:0.08em; text-transform:uppercase;
+  }
+  .result-stats .stat .v{
+    font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; color:var(--amber);
+  }
+  .btn-row{ display:flex; gap:8px; }
+  .btn{
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+    letter-spacing:0.03em; background:var(--amber); color:#1a1204;
+    border:none; border-radius:8px; padding:10px 22px; cursor:pointer;
+    touch-action:manipulation;
+  }
+  .btn:active{ transform:scale(0.97); }
+  .btn.secondary{
+    background:transparent; color:var(--cream);
+    border:1px solid #333c54;
+  }
+  .name-input{
+    width:100%; max-width:300px;
+    font-family:'Space Grotesk',sans-serif; font-size:13px;
+    background:var(--panel); color:var(--cream);
+    border:1px solid #1f2433; border-radius:8px;
+    padding:9px 12px; outline:none;
+  }
+  .name-input:focus{ border-color:var(--amber); }
+  .mode-select{
+    display:flex; flex-direction:column; gap:8px; width:100%; max-width:320px;
+  }
+  .mode-btn{
+    font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600;
+    letter-spacing:0.02em; text-align:left;
+    background:var(--panel); color:var(--cream-dim);
+    border:1px solid #1f2433; border-radius:8px;
+    padding:10px 14px; cursor:pointer;
+    touch-action:manipulation;
+  }
+  .mode-btn .mode-sub{
+    display:block; font-size:11px; font-weight:400; color:var(--cream-dim);
+    margin-top:2px;
+  }
+  .mode-btn.active{
+    border-color:var(--amber); color:var(--cream);
+    box-shadow:0 0 0 1px var(--amber) inset;
+  }
+  .mode-btn.active .mode-sub{ color:var(--amber); }
+  .records{
+    width:100%; max-width:320px; background:var(--panel);
+    border:1px solid #1f2433; border-radius:10px; padding:10px 12px;
+  }
+  .records-list{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--cream-dim);
+    display:flex; flex-direction:column; gap:4px; text-align:left; margin-top:4px;
+  }
+  .records-list .rec-row{ display:flex; justify-content:space-between; gap:8px; }
+  .records-list .rec-row .rn{ color:var(--cream); }
+  .records-list .rec-row .rs{ color:var(--amber); }
+  .records-list.admin-list{ max-height:260px; overflow-y:auto; }
+  .records-list.admin-list .rec-row{ flex-direction:column; gap:2px; border-bottom:1px solid #1f2433; padding-bottom:6px; margin-bottom:2px; }
+  .records-list.admin-list .rec-row .rt{ color:var(--cream-dim); font-size:10px; }
+  .legend{
+    width:100%; display:flex; gap:14px; justify-content:center;
+    font-size:11px; color:var(--cream-dim); flex-wrap:wrap;
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .sq{ width:9px; height:9px; border-radius:2px; display:inline-block; }
+  .controls{
+    display:grid; grid-template-columns:56px 56px 56px;
+    grid-template-rows:56px 56px 56px; gap:6px; margin-top:2px;
+  }
+  .ctrl-btn{
+    background:var(--panel); border:1px solid #1f2433; border-radius:10px;
+    color:var(--amber); font-size:18px;
+    display:flex; align-items:center; justify-content:center;
+    user-select:none; -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  .ctrl-btn:active{ background:#1a1f2c; }
+  .c-up{grid-column:2; grid-row:1;}
+  .c-left{grid-column:1; grid-row:2;}
+  .c-down{grid-column:2; grid-row:2;}
+  .c-right{grid-column:3; grid-row:2;}
+  .hint{ font-size:11px; color:var(--cream-dim); text-align:center; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="title">
+    <h1>心理学迷路</h1>
+    <p>出口はない。ランタンの灯りだけを頼りに、1分間迷路の中で生き延びろ。</p>
+  </div>
+
+  <div class="hud">
+    <div class="stamina-block">
+      <div class="stamina-top">
+        <div class="hud-label">体力</div>
+        <span class="stun-indicator" id="stunIndicator">満腹中…動けない</span>
+        <div class="hud-value" id="staminaVal">100</div>
+      </div>
+      <div class="stamina-track">
+        <div class="stamina-fill" id="staminaFill"></div>
+        <div class="stamina-text" id="staminaText">100 / 500</div>
+      </div>
+    </div>
+    <div class="hud-row">
+      <div class="hud-block">
+        <div class="hud-label">残り時間</div>
+        <div class="hud-value" id="timeVal">60</div>
+      </div>
+    </div>
+    <button class="field-change-btn" id="fieldChangeBtn">
+      <span class="key-cap">Enter</span> でフィールド変更（ダメージ注意）
+    </button>
+  </div>
+
+  <div class="board-wrap">
+    <canvas id="board"></canvas>
+    <div class="overlay show" id="titleScreen">
+      <h2>心理学迷路</h2>
+      <p>出口はない。ランタンの灯りだけを頼りに、1分間迷路の中で生き延びろ。エサを食べると体力が回復する。Enterキー（またはボタン）でいつでもフィールドを切り替えられるが、切り替え時はダメージを受ける。</p>
+      <input type="text" class="name-input" id="playerNameInput" placeholder="プレイヤー名（任意）" maxlength="12">
+      <div class="mode-select">
+        <button class="mode-btn active" data-mode="static" id="modeStaticBtn">
+          静止時は消耗しない
+          <span class="mode-sub">体力は移動したときだけ減る</span>
+        </button>
+        <button class="mode-btn" data-mode="drain" id="modeDrainBtn">
+          静止時も消耗する
+          <span class="mode-sub">立ち止まっていても50/60秒のペースで減る</span>
+        </button>
+        <button class="mode-btn" data-mode="freeze" id="modeFreezeBtn">
+          食事中停止する
+          <span class="mode-sub">餌を食べると30フレーム動けなくなる。この間も体力は減り続ける</span>
+        </button>
+      </div>
+      <button class="btn" id="startBtn">スタート</button>
+      <div class="records" id="recordsBlock">
+        <div class="hud-label" id="recordsLabel">全プレイヤーの記録（共有保存）</div>
+        <div class="records-list" id="recordsList">読み込み中…</div>
+      <button class="btn secondary" id="exportCsvBtn">CSVエクスポート</button>
+      </div>
+    </div>
+    <div class="overlay" id="overlay">
+      <h2 id="overlayTitle"></h2>
+      <p id="overlayText"></p>
+      <div class="result-stats">
+        <div class="stat"><div class="k">プレイヤー</div><div class="v" id="statName">-</div></div>
+        <div class="stat"><div class="k">スコア（最終HP）</div><div class="v" id="statScore">-</div></div>
+        <div class="stat"><div class="k">マップ変更回数</div><div class="v" id="statChanges">-</div></div>
+        <div class="stat"><div class="k">移動距離</div><div class="v" id="statDistance">-</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" id="toTitleBtn">タイトルへ</button>
+        <button class="btn" id="restartBtn">もう一度挑戦</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--amber)"></span>あなた</span>
+    <span><span class="dot" style="background:var(--moss)"></span>餌（体力回復）</span>
+    <span><span class="sq" style="background:var(--wall-lit)"></span>壁</span>
+  </div>
+
+  <div class="controls" id="controls">
+    <div class="ctrl-btn c-up" data-dr="-1" data-dc="0">▲</div>
+    <div class="ctrl-btn c-left" data-dr="0" data-dc="-1">◀</div>
+    <div class="ctrl-btn c-down" data-dr="1" data-dc="0">▼</div>
+    <div class="ctrl-btn c-right" data-dr="0" data-dc="1">▶</div>
+  </div>
+  <div class="hint">矢印キー / WASD またはボタンで移動。PC・スマホどちらでも操作できます。</div>
+</div>
+
+<script>
+(function(){
+  const N_FIRST = 11;           // maze cells per side — first field only
+  const N_NORMAL = 17;          // maze cells per side — every field after the first
+  let N, GRID;                  // set dynamically per map via setMazeSize()
+  const CELL = 20;              // pixels per grid tile
+  const VISION = 2.0;           // vision radius in cell-units
+
+  const STAMINA_START = 100;
+  const STAMINA_CAP = 300;      // usable/displayed hard cap
+  const STAMINA_BAR_MAX = 100;  // the bar visually reads as "full" at this value
+  const MOVE_COST = 2;
+  const FOOD_RESTORE = 15;
+
+  const FOOD_COUNT_FIRST = 10;                       // fixed count on the very first field
+  const FOOD_COUNT_OPTIONS = [20, 40, 60];           // options for every field after the first
+  const FOOD_COUNT_WEIGHTS = [0.45, 0.50, 0.05];
+
+  const FIELD_CHANGE_DAMAGE_OPTIONS = [10, 25, 50];
+  const FIELD_CHANGE_DAMAGE_WEIGHTS = [0.20, 0.60, 0.20];
+
+  const TIME_LIMIT = 60;
+  const IDLE_DRAIN_PER_MS = 50 / 60000;   // 50dmg / 60sec (== 5dmg / 360f at 60fps)
+  const EAT_STUN_FRAMES = 30;
+
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+
+  function setMazeSize(n){
+    N = n;
+    GRID = N * 2 + 1;
+    canvas.width = GRID * CELL;
+    canvas.height = GRID * CELL;
+  }
+  setMazeSize(N_FIRST);
+
+  const timeValEl = document.getElementById('timeVal');
+  const staminaValEl = document.getElementById('staminaVal');
+  const staminaFillEl = document.getElementById('staminaFill');
+  const staminaTextEl = document.getElementById('staminaText');
+  const stunIndicatorEl = document.getElementById('stunIndicator');
+  const overlayEl = document.getElementById('overlay');
+  const overlayTitleEl = document.getElementById('overlayTitle');
+  const overlayTextEl = document.getElementById('overlayText');
+  const statNameEl = document.getElementById('statName');
+  const statScoreEl = document.getElementById('statScore');
+  const statChangesEl = document.getElementById('statChanges');
+  const statDistanceEl = document.getElementById('statDistance');
+  const titleScreenEl = document.getElementById('titleScreen');
+  const playerNameInput = document.getElementById('playerNameInput');
+  const modeStaticBtn = document.getElementById('modeStaticBtn');
+  const modeDrainBtn = document.getElementById('modeDrainBtn');
+  const modeFreezeBtn = document.getElementById('modeFreezeBtn');
+  const modeButtons = [modeStaticBtn, modeDrainBtn, modeFreezeBtn];
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const toTitleBtn = document.getElementById('toTitleBtn');
+  const fieldChangeBtn = document.getElementById('fieldChangeBtn');
+  const recordsBlockEl = document.getElementById('recordsBlock');
+  const recordsLabelEl = document.getElementById('recordsLabel');
+  const recordsListEl = document.getElementById('recordsList');
+
+  let wallGrid, player, foods, foodCount, foodEaten, distanceTraveled, mapNumber;
+  let rawStamina, stamina, timeLeft, timerHandle, animHandle, gameOver, startTime, frameLast;
+  let screenState = 'title';
+  let gameMode = 'static';   // 'static' | 'drain' | 'freeze'
+  let eatStun = 0;           // frames remaining where movement is locked
+  let playerName = '';
+
+  function idleDrainOn(){ return gameMode !== 'static'; }
+  function freezeOnEatOn(){ return gameMode === 'freeze'; }
+
+  function weightedPick(options, weights){
+    const r = Math.random();
+    let acc = 0;
+    for(let i=0;i<options.length;i++){
+      acc += weights[i];
+      if(r <= acc) return options[i];
+    }
+    return options[options.length-1];
+  }
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  // wallGrid[gr][gc] === true -> solid wall tile. Cells live at odd,odd positions.
+  function buildMaze(){
+    const grid = Array.from({length:GRID}, () => Array(GRID).fill(true));
+    const visited = Array.from({length:N}, () => Array(N).fill(false));
+
+    function carve(r,c){
+      visited[r][c] = true;
+      grid[2*r+1][2*c+1] = false;
+      const dirs = shuffle([[-1,0],[1,0],[0,-1],[0,1]]);
+      for(const [dr,dc] of dirs){
+        const nr=r+dr, nc=c+dc;
+        if(nr<0||nr>=N||nc<0||nc>=N||visited[nr][nc]) continue;
+        grid[2*r+1+dr][2*c+1+dc] = false;
+        carve(nr,nc);
+      }
+    }
+    carve(Math.floor(N/2), Math.floor(N/2));
+
+    const loopChance = 0.14;
+    for(let r=0;r<N;r++){
+      for(let c=0;c<N-1;c++){
+        const gr=2*r+1, gc=2*c+2;
+        if(grid[gr][gc] && Math.random() < loopChance) grid[gr][gc] = false;
+      }
+    }
+    for(let r=0;r<N-1;r++){
+      for(let c=0;c<N;c++){
+        const gr=2*r+2, gc=2*c+1;
+        if(grid[gr][gc] && Math.random() < loopChance) grid[gr][gc] = false;
+      }
+    }
+    return grid;
+  }
+
+  function canMove(r,c,dr,dc){
+    return !wallGrid[2*r+1+dr][2*c+1+dc];
+  }
+
+  function placeFood(){
+    const list = [];
+    const startR = player.r, startC = player.c;
+    let attempts = 0;
+    while(list.length < foodCount && attempts < 10000){
+      attempts++;
+      const r = Math.floor(Math.random()*N);
+      const c = Math.floor(Math.random()*N);
+      if(Math.abs(r-startR)+Math.abs(c-startC) < 3) continue;
+      if(list.some(f => f.r===r && f.c===c)) continue;
+      list.push({r,c});
+    }
+    return list;
+  }
+
+  // All stamina changes flow through here so we can track true (uncapped) HP.
+  function applyStaminaDelta(delta){
+    rawStamina += delta;
+    if(rawStamina < 0) rawStamina = 0;
+    stamina = Math.min(rawStamina, STAMINA_CAP);
+    if(rawStamina > STAMINA_CAP){
+      console.log(
+        '[心理学迷路 debug] overflow HP — raw:', Math.round(rawStamina*10)/10,
+        ' displayed cap:', STAMINA_CAP,
+        ' overflow amount:', Math.round((rawStamina-STAMINA_CAP)*10)/10
+      );
+    }
+  }
+
+  async function saveRecord(record){
+    try{
+      const key = 'runs:' + Date.now() + '-' + Math.floor(Math.random()*100000);
+      await window.storage.set(key, JSON.stringify(record), true);
+    }catch(e){
+      console.error('record save failed', e);
+    }
+  }
+
+  async function loadRecords(){
+    recordsListEl.textContent = '読み込み中…';
+    try{
+      const listRes = await window.storage.list('runs:', true);
+      const keys = (listRes && listRes.keys) ? listRes.keys : [];
+      if(keys.length === 0){
+        recordsListEl.textContent = 'まだ記録がありません。';
+        return;
+      }
+      const recent = keys.slice(-50);
+      const records = [];
+      for(const k of recent){
+        try{
+          const r = await window.storage.get(k, true);
+          if(r && r.value) records.push(JSON.parse(r.value));
+        }catch(e){ /* skip unreadable entries */ }
+      }
+      records.sort((a,b) => b.score - a.score);
+      const top = records.slice(0,5);
+      if(top.length === 0){
+        recordsListEl.textContent = 'まだ記録がありません。';
+        return;
+      }
+      recordsListEl.innerHTML = '';
+      top.forEach(rec => {
+        const row = document.createElement('div');
+        row.className = 'rec-row';
+        row.innerHTML =
+          '<span class="rn">' + escapeHtml(rec.name || '名無し') + '</span>' +
+          '<span class="rs">HP ' + rec.score + ' ／ 変更' + rec.mapChanges + '回 ／ 距離' + rec.distance + '</span>';
+        recordsListEl.appendChild(row);
+      });
+    }catch(e){
+      console.error('record load failed', e);
+      recordsListEl.textContent = '記録を読み込めませんでした。';
+    }
+  }
+async function exportCsv(){
+  const listRes = await window.storage.list('runs:', true);
+  const keys = (listRes && listRes.keys) ? listRes.keys : [];
+  const records = [];
+
+  for(const k of keys){
+    try{
+      const r = await window.storage.get(k, true);
+      if(r && r.value) records.push(JSON.parse(r.value));
+    }catch(e){}
+  }
+
+  if(records.length === 0){
+    alert('記録がありません');
+    return;
+  }
+
+  // CSV ヘッダー
+  let csv = 'name,score,mapChanges,distance,foodEaten,timestamp\n';
+
+  // CSV 本体
+  records.forEach(rec => {
+    csv += [
+      `"${rec.name}"`,
+      rec.score,
+      rec.mapChanges,
+      rec.distance,
+      rec.foodEaten,
+      rec.timestamp
+    ].join(',') + '\n';
+  });
+
+  // ダウンロード処理
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'records.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, ch => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[ch]));
+  }
+
+  function showTitle(){
+    screenState = 'title';
+    gameOver = true;
+    if(timerHandle) clearInterval(timerHandle);
+    overlayEl.classList.remove('show');
+    titleScreenEl.classList.add('show');
+    loadRecords();
+  }
+
+  function initGame(){
+    playerName = (playerNameInput.value || '').trim().slice(0,12) || '名無し';
+    setMazeSize(N_FIRST);
+    wallGrid = buildMaze();
+    player = {r: Math.floor(N/2), c: Math.floor(N/2)};
+    mapNumber = 1;
+    foodCount = FOOD_COUNT_FIRST;
+    foods = placeFood();
+    foodEaten = 0;
+    distanceTraveled = 0;
+    eatStun = 0;
+    rawStamina = STAMINA_START;
+    stamina = STAMINA_START;
+    timeLeft = TIME_LIMIT;
+    gameOver = false;
+    screenState = 'playing';
+    startTime = performance.now();
+    frameLast = null;
+    updateHud();
+    overlayEl.classList.remove('show');
+    titleScreenEl.classList.remove('show');
+
+    if(timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(() => {
+      if(gameOver) return;
+      timeLeft--;
+      updateHud();
+      if(timeLeft <= 0){
+        timeLeft = 0;
+        updateHud();
+        endGame(true);
+      }
+    }, 1000);
+
+    if(animHandle) cancelAnimationFrame(animHandle);
+    tick();
+  }
+
+  function changeField(){
+    if(gameOver || screenState !== 'playing') return;
+    mapNumber++;
+    setMazeSize(N_NORMAL);
+    wallGrid = buildMaze();
+    player = {r: Math.floor(N/2), c: Math.floor(N/2)};
+    foodCount = weightedPick(FOOD_COUNT_OPTIONS, FOOD_COUNT_WEIGHTS);
+    foods = placeFood();
+    eatStun = 0;
+
+    const dmg = weightedPick(FIELD_CHANGE_DAMAGE_OPTIONS, FIELD_CHANGE_DAMAGE_WEIGHTS);
+    applyStaminaDelta(-dmg);
+    updateHud();
+
+    if(stamina <= 0){
+      endGame(false);
+    }
+  }
+
+  function updateHud(){
+    timeValEl.textContent = Math.max(0,timeLeft);
+    timeValEl.className = 'hud-value' + (timeLeft<=15 ? ' danger' : '');
+    const danger = stamina <= STAMINA_CAP*0.25;
+    const overflow = stamina > STAMINA_BAR_MAX;
+    staminaValEl.textContent = Math.round(stamina);
+    staminaValEl.className = 'hud-value' + (danger ? ' danger' : '');
+    staminaFillEl.style.width = (Math.min(stamina, STAMINA_BAR_MAX)/STAMINA_BAR_MAX*100) + '%';
+    staminaFillEl.className = 'stamina-fill' + (danger ? ' danger' : '') + (overflow ? ' overflow' : '');
+    staminaTextEl.textContent = Math.round(stamina) + ' / ' + STAMINA_CAP;
+    stunIndicatorEl.classList.toggle('show', eatStun > 0);
+  }
+
+  function endGame(won){
+    gameOver = true;
+    clearInterval(timerHandle);
+    overlayEl.classList.add('show');
+    const score = Math.round(stamina);
+    const mapChanges = mapNumber - 1;
+
+    if(won){
+      overlayTitleEl.textContent = '生存成功';
+      overlayTitleEl.className = 'win';
+      overlayTextEl.textContent = '1分間、闇の迷路で生き延びた。捕食した餌: ' + foodEaten + '匹。';
+    } else {
+      overlayTitleEl.textContent = '力尽きた';
+      overlayTitleEl.className = 'lose';
+      overlayTextEl.textContent = '体力が尽きた。残り時間 ' + Math.max(0,timeLeft) + '秒。捕食した餌: ' + foodEaten + '匹。';
+    }
+
+    statNameEl.textContent = playerName;
+    statScoreEl.textContent = score;
+    statChangesEl.textContent = mapChanges;
+    statDistanceEl.textContent = distanceTraveled;
+
+    saveRecord({
+      name: playerName,
+      score: score,
+      mapChanges: mapChanges,
+      distance: distanceTraveled,
+      foodEaten: foodEaten,
+      timestamp: Date.now()
+    });
+  }
+
+  function tryMove(dr,dc){
+    if(screenState !== 'playing' || gameOver) return;
+    if(eatStun > 0) return;
+    if(stamina <= 0) return;
+    if(!canMove(player.r, player.c, dr, dc)) return;
+    player.r += dr; player.c += dc;
+    distanceTraveled++;
+    applyStaminaDelta(-MOVE_COST);
+
+    const fi = foods.findIndex(f => f.r===player.r && f.c===player.c);
+    if(fi !== -1){
+      foods.splice(fi,1);
+      foodEaten++;
+      applyStaminaDelta(FOOD_RESTORE);
+      if(freezeOnEatOn()) eatStun = EAT_STUN_FRAMES;
+    }
+
+    updateHud();
+
+    if(stamina <= 0){
+      endGame(false);
+    }
+  }
+
+  function draw(flicker){
+    ctx.fillStyle = '#05060a';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    const visRadius = VISION * (1 + flicker*0.04);
+
+    const rBound = Math.ceil(visRadius) + 1;
+    const grMin = Math.max(0, 2*player.r+1 - 2*rBound);
+    const grMax = Math.min(GRID-1, 2*player.r+1 + 2*rBound);
+    const gcMin = Math.max(0, 2*player.c+1 - 2*rBound);
+    const gcMax = Math.min(GRID-1, 2*player.c+1 + 2*rBound);
+
+    for(let gr=grMin; gr<=grMax; gr++){
+      const posR = (gr-1)/2;
+      for(let gc=gcMin; gc<=gcMax; gc++){
+        const posC = (gc-1)/2;
+        const dist = Math.hypot(posR-player.r, posC-player.c);
+        if(dist > visRadius) continue;
+        const x = gc*CELL, y = gr*CELL;
+
+        if(wallGrid[gr][gc]){
+          ctx.fillStyle = '#5b6a94';
+          ctx.fillRect(x, y, CELL, CELL);
+          ctx.fillStyle = 'rgba(133,147,187,0.9)';
+          ctx.fillRect(x, y, CELL, 3);
+          ctx.fillRect(x, y, 3, CELL);
+          ctx.fillStyle = 'rgba(35,40,56,0.9)';
+          ctx.fillRect(x, y+CELL-3, CELL, 3);
+          ctx.fillRect(x+CELL-3, y, 3, CELL);
+        } else {
+          ctx.fillStyle = '#232a3d';
+          ctx.fillRect(x, y, CELL, CELL);
+        }
+      }
+    }
+
+    foods.forEach(f => {
+      const dist = Math.hypot(f.r-player.r, f.c-player.c);
+      if(dist > visRadius) return;
+      const gc = 2*f.c+1, gr = 2*f.r+1;
+      const cx = gc*CELL + CELL/2, cy = gr*CELL + CELL/2;
+      ctx.save();
+      ctx.shadowColor = '#8fd19e';
+      ctx.shadowBlur = 9;
+      ctx.fillStyle = '#8fd19e';
+      ctx.beginPath();
+      ctx.arc(cx, cy, CELL*0.22, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    const px = (2*player.c+1)*CELL + CELL/2, py = (2*player.r+1)*CELL + CELL/2;
+    const grad = ctx.createRadialGradient(px,py,2, px,py, visRadius*CELL*0.95);
+    grad.addColorStop(0, 'rgba(242,177,85,0.18)');
+    grad.addColorStop(1, 'rgba(242,177,85,0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(px,py, visRadius*CELL*0.95, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.shadowColor = eatStun > 0 ? '#e0665a' : '#f2b155';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = eatStun > 0 ? '#e0665a' : '#f2b155';
+    ctx.beginPath();
+    ctx.arc(px, py, CELL*0.3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function tick(now){
+    now = now || performance.now();
+    if(frameLast === null) frameLast = now;
+    const dt = now - frameLast;
+    frameLast = now;
+
+    if(screenState === 'playing' && !gameOver){
+      if(eatStun > 0) eatStun--;
+
+      if(idleDrainOn() && stamina > 0){
+        applyStaminaDelta(-IDLE_DRAIN_PER_MS * dt);
+        updateHud();
+        if(stamina <= 0){
+          endGame(false);
+        }
+      }
+    }
+
+    const t = now - startTime;
+    const flicker = Math.sin(t/450);
+    draw(flicker);
+    if(!gameOver){
+      animHandle = requestAnimationFrame(tick);
+    }
+  }
+
+  const KEY_MAP = {
+    ArrowUp:[-1,0], ArrowDown:[1,0], ArrowLeft:[0,-1], ArrowRight:[0,1],
+    w:[-1,0], s:[1,0], a:[0,-1], d:[0,1],
+    W:[-1,0], S:[1,0], A:[0,-1], D:[0,1]
+  };
+  window.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      changeField();
+      return;
+    }
+    const m = KEY_MAP[e.key];
+    if(!m) return;
+    e.preventDefault();
+    tryMove(m[0], m[1]);
+  });
+
+  document.getElementById('controls').addEventListener('click', (e) => {
+    const btn = e.target.closest('.ctrl-btn');
+    if(!btn) return;
+    tryMove(parseInt(btn.dataset.dr,10), parseInt(btn.dataset.dc,10));
+  });
+
+const params = new URLSearchParams(location.search);
+const isAdmin = params.get('admin') === '1';
+
+const exportCsvBtn = document.getElementById('exportCsvBtn');
+if(exportCsvBtn){  
+  exportCsvBtn.style.display = isAdmin ? 'block' : 'none';
+
+  if(isAdmin){
+   
+  exportCsvBtn.addEventListener('click', exportCsv);
+ }
+}
+
+  fieldChangeBtn.addEventListener('click', changeField);
+  restartBtn.addEventListener('click', initGame);
+  toTitleBtn.addEventListener('click', showTitle);
+  startBtn.addEventListener('click', initGame);
+
+  modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      gameMode = btn.dataset.mode;
+      modeButtons.forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+
+  loadRecords();
+})();
+</script>
+</body>
+</html>
