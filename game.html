@@ -25,15 +25,18 @@
   *{box-sizing:border-box;}
   html,body{
     margin:0; padding:0; min-height:100%;
-    background:var(--void); color:var(--cream);
+    background:var(--void);
+    color:var(--cream);
     font-family:'Space Grotesk',sans-serif;
     display:flex; align-items:flex-start; justify-content:center;
     overflow-x:hidden;
   }
   .stage{
-    width:100%; max-width:520px; margin: 0 auto; padding:20px 16px 32px;
-    display:flex; flex-direction:column; align-items:center; gap:12px; 
-    position: relative;
+    width:100%;
+    max-width:520px;
+    padding:20px 16px 32px;
+    display:flex; flex-direction:column; align-items:center;
+    gap:12px;
   }
   .title{ text-align:center; }
   .title h1{
@@ -144,7 +147,7 @@
     background:#05060a; padding:6px;
     box-shadow:0 0 0 1px #1f2433, 0 20px 40px -20px rgba(0,0,0,0.8);
   }
-  canvas{ display:block; max-width:100%; height:auto; border-radius:8px; }
+  canvas{ display:block; width:100%; height:auto; border-radius:8px; }
   .overlay{
     position:absolute; inset:6px; border-radius:8px;
     display:none; flex-direction:column; align-items:center; justify-content:center;
@@ -251,84 +254,9 @@
   .c-down{grid-column:2; grid-row:2;}
   .c-right{grid-column:3; grid-row:2;}
   .hint{ font-size:11px; color:var(--cream-dim); text-align:center; }
-
-   html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden; 
-      height: 100%;
-    }
-
-  #game-container {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-    }
-
-  canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
-   .ui-buttons {
-      position: absolute;
-      bottom: 20px; 
-      left: 50%;
-      transform: translateX(-50%);
-    }
 </style>
 </head>
 <body>
-   <div id="game-container">
-      <div class="board-wrap">
-    <canvas id="board"></canvas>
-    <div class="overlay show" id="titleScreen">
-      <h2>心理学迷路</h2>
-      <p>出口はない。ランタンの灯りだけを頼りに、1分間迷路の中で生き延びろ。エサを食べると体力が回復する。Enterキー（またはボタン）でいつでもフィールドを切り替えられるが、切り替え時はダメージを受ける。</p>
-      <input type="text" class="name-input" id="playerNameInput" placeholder="プレイヤー名（任意）" maxlength="12">
-      <div class="mode-select">
-        <button class="mode-btn active" data-mode="static" id="modeStaticBtn">
-          静止時は消耗しない
-          <span class="mode-sub">体力は移動したときだけ減る</span>
-        </button>
-        <button class="mode-btn" data-mode="drain" id="modeDrainBtn">
-          静止時も消耗する
-          <span class="mode-sub">立ち止まっていても約1秒1ダメージを受ける</span>
-        </button>
-        <button class="mode-btn" data-mode="freeze" id="modeFreezeBtn">
-          食事中停止する
-          <span class="mode-sub">餌を食べると30フレーム動けなくなる。この間も体力は減り続ける</span>
-        </button>
-      </div>
-      <button class="btn" id="startBtn">スタート</button>
-      <div class="records" id="recordsBlock">
-        <div class="hud-label" id="recordsLabel">全プレイヤーの記録（共有保存）</div>
-        <div class="records-list" id="recordsList">読み込み中…</div>
-      <button class="btn secondary" id="exportCsvBtn">CSVエクスポート</button>
-      </div>
-    </div>
-    <div class="overlay" id="overlay">
-      <h2 id="overlayTitle"></h2>
-      <p id="overlayText"></p>
-      <div class="result-stats">
-        <div class="stat"><div class="k">プレイヤー</div><div class="v" id="statName">-</div></div>
-        <div class="stat"><div class="k">スコア（最終HP）</div><div class="v" id="statScore">-</div></div>
-        <div class="stat"><div class="k">マップ変更回数</div><div class="v" id="statChanges">-</div></div>
-        <div class="stat"><div class="k">移動距離</div><div class="v" id="statDistance">-</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn secondary" id="toTitleBtn">タイトルへ</button>
-        <button class="btn" id="restartBtn">もう一度挑戦</button>
-      </div>
-    </div>
-            <div class="ui-buttons">
-      <button id="up">↑</button>
-      <button id="left">←</button>
-      <button id="right">→</button>
-      <button id="down">↓</button>
-    </div>
-  </div>
-     
-     
 <div class="stage">
   <div class="title">
     <h1>心理学迷路</h1>
@@ -356,6 +284,49 @@
     <button class="field-change-btn" id="fieldChangeBtn">
       <span class="key-cap">Enter</span> でフィールド変更（ダメージ注意）
     </button>
+  </div>
+
+  <div class="board-wrap">
+    <canvas id="board"></canvas>
+    <div class="overlay show" id="titleScreen">
+      <h2>心理学迷路</h2>
+      <p>出口はない。ランタンの灯りだけを頼りに、1分間迷路の中で生き延びろ。エサを食べると体力が回復する。Enterキー（またはボタン）でいつでもフィールドを切り替えられるが、切り替え時はダメージを受ける。</p>
+      <input type="text" class="name-input" id="playerNameInput" placeholder="プレイヤー名（任意）" maxlength="12">
+      <div class="mode-select">
+        <button class="mode-btn active" data-mode="static" id="modeStaticBtn">
+          静止時は消耗しない
+          <span class="mode-sub">体力は移動したときだけ減る</span>
+        </button>
+        <button class="mode-btn" data-mode="drain" id="modeDrainBtn">
+          静止時も消耗する
+          <span class="mode-sub">立ち止まっていても50/60秒のペースで減る</span>
+        </button>
+        <button class="mode-btn" data-mode="freeze" id="modeFreezeBtn">
+          食事中停止する
+          <span class="mode-sub">餌を食べると30フレーム動けなくなる。この間も体力は減り続ける</span>
+        </button>
+      </div>
+      <button class="btn" id="startBtn">スタート</button>
+      <div class="records" id="recordsBlock">
+        <div class="hud-label" id="recordsLabel">全プレイヤーの記録（共有保存）</div>
+        <div class="records-list" id="recordsList">読み込み中…</div>
+      <button class="btn secondary" id="exportCsvBtn">CSVエクスポート</button>
+      </div>
+    </div>
+    <div class="overlay" id="overlay">
+      <h2 id="overlayTitle"></h2>
+      <p id="overlayText"></p>
+      <div class="result-stats">
+        <div class="stat"><div class="k">プレイヤー</div><div class="v" id="statName">-</div></div>
+        <div class="stat"><div class="k">スコア（最終HP）</div><div class="v" id="statScore">-</div></div>
+        <div class="stat"><div class="k">マップ変更回数</div><div class="v" id="statChanges">-</div></div>
+        <div class="stat"><div class="k">移動距離</div><div class="v" id="statDistance">-</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" id="toTitleBtn">タイトルへ</button>
+        <button class="btn" id="restartBtn">もう一度挑戦</button>
+      </div>
+    </div>
   </div>
 
   <div class="legend">
