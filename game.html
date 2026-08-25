@@ -254,39 +254,39 @@
   .c-down{grid-column:2; grid-row:2;}
   .c-right{grid-column:3; grid-row:2;}
   .hint{ font-size:11px; color:var(--cream-dim); text-align:center; }
+
+   html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden; 
+      height: 100%;
+    }
+
+  #game-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh; 
+    }
+
+  canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+   .ui-buttons {
+      position: absolute;
+      bottom: 20px; 
+      left: 50%;
+      transform: translateX(-50%);
+    }
 </style>
 </head>
 <body>
-<div class="stage">
-  <div class="title">
-    <h1>心理学迷路</h1>
-    <p>出口はない。ランタンの灯りだけを頼りに、1分間迷路の中で生き延びろ。</p>
-  </div>
-
-  <div class="hud">
-    <div class="stamina-block">
-      <div class="stamina-top">
-        <div class="hud-label">体力</div>
-        <span class="stun-indicator" id="stunIndicator">満腹中…動けない</span>
-        <div class="hud-value" id="staminaVal">100</div>
-      </div>
-      <div class="stamina-track">
-        <div class="stamina-fill" id="staminaFill"></div>
-        <div class="stamina-text" id="staminaText">100 / 500</div>
-      </div>
-    </div>
-    <div class="hud-row">
-      <div class="hud-block">
-        <div class="hud-label">残り時間</div>
-        <div class="hud-value" id="timeVal">60</div>
-      </div>
-    </div>
-    <button class="field-change-btn" id="fieldChangeBtn">
-      <span class="key-cap">Enter</span> でフィールド変更（ダメージ注意）
-    </button>
-  </div>
-
-  <div class="board-wrap">
+   <div id="game-container">
+      <div class="board-wrap">
     <canvas id="board"></canvas>
     <div class="overlay show" id="titleScreen">
       <h2>心理学迷路</h2>
@@ -299,7 +299,7 @@
         </button>
         <button class="mode-btn" data-mode="drain" id="modeDrainBtn">
           静止時も消耗する
-          <span class="mode-sub">立ち止まっていても50/60秒のペースで減る</span>
+          <span class="mode-sub">立ち止まっていても約1秒1ダメージを受ける</span>
         </button>
         <button class="mode-btn" data-mode="freeze" id="modeFreezeBtn">
           食事中停止する
@@ -327,6 +327,42 @@
         <button class="btn" id="restartBtn">もう一度挑戦</button>
       </div>
     </div>
+            <div class="ui-buttons">
+      <button id="up">↑</button>
+      <button id="left">←</button>
+      <button id="right">→</button>
+      <button id="down">↓</button>
+    </div>
+  </div>
+     
+     
+<div class="stage">
+  <div class="title">
+    <h1>心理学迷路</h1>
+    <p>出口はない。ランタンの灯りだけを頼りに、1分間迷路の中で生き延びろ。</p>
+  </div>
+
+  <div class="hud">
+    <div class="stamina-block">
+      <div class="stamina-top">
+        <div class="hud-label">体力</div>
+        <span class="stun-indicator" id="stunIndicator">満腹中…動けない</span>
+        <div class="hud-value" id="staminaVal">100</div>
+      </div>
+      <div class="stamina-track">
+        <div class="stamina-fill" id="staminaFill"></div>
+        <div class="stamina-text" id="staminaText">100 / 500</div>
+      </div>
+    </div>
+    <div class="hud-row">
+      <div class="hud-block">
+        <div class="hud-label">残り時間</div>
+        <div class="hud-value" id="timeVal">60</div>
+      </div>
+    </div>
+    <button class="field-change-btn" id="fieldChangeBtn">
+      <span class="key-cap">Enter</span> でフィールド変更（ダメージ注意）
+    </button>
   </div>
 
   <div class="legend">
