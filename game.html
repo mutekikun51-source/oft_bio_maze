@@ -378,6 +378,9 @@
   const IDLE_DRAIN_PER_MS = 50 / 60000;   // 50dmg / 60sec (== 5dmg / 360f at 60fps)
   const EAT_STUN_FRAMES = 30;
 
+  // ---- Admin detection (must exist before loadRecords()/exportCsv() run) ----
+  const params = new URLSearchParams(location.search);
+  const isAdmin = params.get('admin') === '1';
   const canvas = document.getElementById('board');
   const ctx = canvas.getContext('2d');
 
