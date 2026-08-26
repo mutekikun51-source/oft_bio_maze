@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -47,6 +48,44 @@
     margin:4px 0 0; font-size:12px;
     color:var(--cream-dim); letter-spacing:0.02em;
   }
+
+  /* ---- Full-width "screens" (title / result). NOT boxed inside the canvas,
+     so their content can never be clipped or made unreachable regardless of
+     maze/canvas size. Only one is shown at a time via the .show class. ---- */
+  .screen{
+    display:none;
+    flex-direction:column; align-items:center; gap:12px;
+    width:100%;
+    background:var(--panel);
+    border:1px solid #1f2433;
+    border-radius:12px;
+    padding:20px 18px;
+  }
+  .screen.show{ display:flex; }
+  .screen h2{ margin:0; font-size:20px; letter-spacing:0.03em; }
+  .screen h2.win{ color:var(--moss); }
+  .screen h2.lose{ color:var(--danger); }
+  .screen p{
+    margin:0; font-size:13px; color:var(--cream-dim);
+    max-width:340px; line-height:1.6; text-align:center;
+  }
+
+  .admin-badge{
+    display:none;
+    font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;
+    letter-spacing:0.08em; color:#1a1204; background:var(--danger);
+    border-radius:5px; padding:3px 8px;
+  }
+  .admin-badge.show{ display:inline-block; }
+
+  /* ---- Game area (HUD + maze + controls). Hidden while on title/result. ---- */
+  .game-area{
+    display:none;
+    flex-direction:column; align-items:center; gap:12px;
+    width:100%;
+  }
+  .game-area.show{ display:flex; }
+
   .hud{
     width:100%; display:flex; flex-direction:column; gap:10px;
   }
@@ -148,33 +187,13 @@
     box-shadow:0 0 0 1px #1f2433, 0 20px 40px -20px rgba(0,0,0,0.8);
   }
   canvas{ display:block; width:100%; height:auto; border-radius:8px; }
-  .overlay{
-    position:absolute; inset:6px; border-radius:8px;
-    display:none; flex-direction:column; align-items:center; justify-content:center;
-    gap:12px; background:rgba(6,7,10,0.94); text-align:center; padding:18px;
-    overflow-y:auto;
-  }
-  .overlay.show{ display:flex; }
-  .overlay h2{ margin:0; font-size:20px; letter-spacing:0.03em; }
-  .overlay h2.win{ color:var(--moss); }
-  .overlay h2.lose{ color:var(--danger); }
-  .overlay p{
-    margin:0; font-size:13px; color:var(--cream-dim);
-    max-width:320px; line-height:1.6;
-  }
-    .admin-badge{
-    display:none;
-    font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;
-    letter-spacing:0.08em; color:#1a1204; background:var(--danger);
-    border-radius:5px; padding:3px 8px; margin-top:4px;
-  }
-  .admin-badge.show{ display:inline-block; }
+
   .result-stats{
     display:grid; grid-template-columns:1fr 1fr; gap:8px;
     width:100%; max-width:320px;
   }
   .result-stats .stat{
-    background:var(--panel); border:1px solid #1f2433; border-radius:8px;
+    background:var(--void); border:1px solid #1f2433; border-radius:8px;
     padding:8px 10px; text-align:left;
   }
   .result-stats .stat .k{
@@ -195,10 +214,17 @@
     background:transparent; color:var(--cream);
     border:1px solid #333c54;
   }
+  /* Fail-safe: the CSV export button is hidden by default via CSS.
+     JS only ever ADDS the .show class for admins — if JS ever fails to run
+     for any reason, the button stays safely hidden instead of defaulting
+     to visible. */
+  #exportCsvBtn{ display:none; }
+  #exportCsvBtn.show{ display:inline-block; }
+
   .name-input{
     width:100%; max-width:300px;
     font-family:'Space Grotesk',sans-serif; font-size:13px;
-    background:var(--panel); color:var(--cream);
+    background:var(--void); color:var(--cream);
     border:1px solid #1f2433; border-radius:8px;
     padding:9px 12px; outline:none;
   }
@@ -209,7 +235,7 @@
   .mode-btn{
     font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600;
     letter-spacing:0.02em; text-align:left;
-    background:var(--panel); color:var(--cream-dim);
+    background:var(--void); color:var(--cream-dim);
     border:1px solid #1f2433; border-radius:8px;
     padding:10px 14px; cursor:pointer;
     touch-action:manipulation;
@@ -224,10 +250,10 @@
   }
   .mode-btn.active .mode-sub{ color:var(--amber); }
   .records{
-    width:100%; max-width:320px; background:var(--panel);
+    width:100%; max-width:320px; background:var(--void);
     border:1px solid #1f2433; border-radius:10px; padding:10px 12px;
   }
-   .records.admin-mode{ border-color:var(--danger); }
+  .records.admin-mode{ border-color:var(--danger); }
   .records-list{
     font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--cream-dim);
     display:flex; flex-direction:column; gap:4px; text-align:left; margin-top:4px;
@@ -271,86 +297,90 @@
     <p>限られた資源とHPの中で、1分間エサ場という名の迷路の中で生き延びろ。</p>
   </div>
 
-  <div class="hud">
-    <div class="stamina-block">
-      <div class="stamina-top">
-        <div class="hud-label">スタミナ</div>
-        <span class="stun-indicator" id="stunIndicator">食事中…動けない</span>
-        <div class="hud-value" id="staminaVal">100</div>
-      </div>
-      <div class="stamina-track">
-        <div class="stamina-fill" id="staminaFill"></div>
-        <div class="stamina-text" id="staminaText">100 / 300</div>
-      </div>
+  <div class="screen show" id="titleScreen">
+    <h2>OFT迷宮</h2>
+    <span class="admin-badge" id="adminBadge">ADMIN MODE</span>
+    <p>限られた資源とHPの中で、1分間エサ場という名の迷路の中で生き延びろ。エサを食べると体力が回復する。Enterキー（またはボタン）でいつでもフィールドを切り替えられる。</p>
+    <input type="text" class="name-input" id="playerNameInput" placeholder="プレイヤー名（任意）" maxlength="12">
+    <div class="mode-select">
+      <button class="mode-btn active" data-mode="static" id="modeStaticBtn">
+        静止時は消耗しない
+        <span class="mode-sub">スタミナは移動したときだけ減る</span>
+      </button>
+      <button class="mode-btn" data-mode="drain" id="modeDrainBtn">
+        静止時も消耗する
+        <span class="mode-sub">立ち止まっていても約1秒に1のペースでスタミナを消耗する</span>
+      </button>
+      <button class="mode-btn" data-mode="freeze" id="modeFreezeBtn">
+        食事中は停止する
+        <span class="mode-sub">餌を食べると0.5秒動けなくなる。この間も体力は減り続ける</span>
+      </button>
     </div>
-    <div class="hud-row">
-      <div class="hud-block">
-        <div class="hud-label">残り時間</div>
-        <div class="hud-value" id="timeVal">60</div>
-      </div>
-    </div>
-    <button class="field-change-btn" id="fieldChangeBtn">
-      <span class="key-cap">Enter</span> でフィールド変更（ダメージ注意）
-    </button>
-  </div>
-
-  <div class="board-wrap">
-    <canvas id="board"></canvas>
-    <div class="overlay show" id="titleScreen">
-      <h2>OFT迷宮</h2>
-      <span class="admin-badge" id="adminBadge">ADMIN MODE</span>
-      <p>限られた資源とHPの中で、1分間エサ場という名の迷路の中で生き延びろ。エサを食べると体力が回復する。Enterキー（またはボタン）でいつでもフィールドを切り替えられる。</p>
-      <input type="text" class="name-input" id="playerNameInput" placeholder="プレイヤー名（任意）" maxlength="12">
-      <div class="mode-select">
-        <button class="mode-btn active" data-mode="static" id="modeStaticBtn">
-          静止時は消耗しない
-          <span class="mode-sub">スタミナは移動したときだけ減る</span>
-        </button>
-        <button class="mode-btn" data-mode="drain" id="modeDrainBtn">
-          静止時も消耗する
-          <span class="mode-sub">立ち止まっていても約1秒に1のペースでスタミナを消耗する</span>
-        </button>
-        <button class="mode-btn" data-mode="freeze" id="modeFreezeBtn">
-          食事中は停止する
-          <span class="mode-sub">餌を食べると0.5秒動けなくなる。この間も体力は減り続ける</span>
-        </button>
-      </div>
-      <button class="btn" id="startBtn">スタート</button>
-      <div class="records" id="recordsBlock">
-        <div class="hud-label" id="recordsLabel">全プレイヤーの記録（共有保存）</div>
-        <div class="records-list" id="recordsList">読み込み中…</div>
+    <button class="btn" id="startBtn">スタート</button>
+    <div class="records" id="recordsBlock">
+      <div class="hud-label" id="recordsLabel">全プレイヤーの記録（共有保存）</div>
+      <div class="records-list" id="recordsList">読み込み中…</div>
       <button class="btn secondary" id="exportCsvBtn">CSVエクスポート</button>
-      </div>
-    </div>
-    <div class="overlay" id="overlay">
-      <h2 id="overlayTitle"></h2>
-      <p id="overlayText"></p>
-      <div class="result-stats">
-        <div class="stat"><div class="k">プレイヤー</div><div class="v" id="statName">-</div></div>
-        <div class="stat"><div class="k">スコア（最終HP）</div><div class="v" id="statScore">-</div></div>
-        <div class="stat"><div class="k">マップ変更回数</div><div class="v" id="statChanges">-</div></div>
-        <div class="stat"><div class="k">移動距離</div><div class="v" id="statDistance">-</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn secondary" id="toTitleBtn">タイトルへ</button>
-        <button class="btn" id="restartBtn">もう一度挑戦</button>
-      </div>
     </div>
   </div>
 
-  <div class="legend">
-    <span><span class="dot" style="background:var(--amber)"></span>あなた</span>
-    <span><span class="dot" style="background:var(--moss)"></span>エサ</span>
-    <span><span class="sq" style="background:var(--wall-lit)"></span>壁</span>
+  <div class="screen" id="resultScreen">
+    <h2 id="overlayTitle"></h2>
+    <p id="overlayText"></p>
+    <div class="result-stats">
+      <div class="stat"><div class="k">プレイヤー</div><div class="v" id="statName">-</div></div>
+      <div class="stat"><div class="k">スコア（最終HP）</div><div class="v" id="statScore">-</div></div>
+      <div class="stat"><div class="k">マップ変更回数</div><div class="v" id="statChanges">-</div></div>
+      <div class="stat"><div class="k">移動距離</div><div class="v" id="statDistance">-</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn secondary" id="toTitleBtn">タイトルへ</button>
+      <button class="btn" id="restartBtn">もう一度挑戦</button>
+    </div>
   </div>
 
-  <div class="controls" id="controls">
-    <div class="ctrl-btn c-up" data-dr="-1" data-dc="0">▲</div>
-    <div class="ctrl-btn c-left" data-dr="0" data-dc="-1">◀</div>
-    <div class="ctrl-btn c-down" data-dr="1" data-dc="0">▼</div>
-    <div class="ctrl-btn c-right" data-dr="0" data-dc="1">▶</div>
+  <div class="game-area" id="gameArea">
+    <div class="hud">
+      <div class="stamina-block">
+        <div class="stamina-top">
+          <div class="hud-label">スタミナ</div>
+          <span class="stun-indicator" id="stunIndicator">食事中…動けない</span>
+          <div class="hud-value" id="staminaVal">100</div>
+        </div>
+        <div class="stamina-track">
+          <div class="stamina-fill" id="staminaFill"></div>
+          <div class="stamina-text" id="staminaText">100 / 300</div>
+        </div>
+      </div>
+      <div class="hud-row">
+        <div class="hud-block">
+          <div class="hud-label">残り時間</div>
+          <div class="hud-value" id="timeVal">60</div>
+        </div>
+      </div>
+      <button class="field-change-btn" id="fieldChangeBtn">
+        <span class="key-cap">Enter</span> でフィールド変更（ダメージ注意）
+      </button>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot" style="background:var(--amber)"></span>あなた</span>
+      <span><span class="dot" style="background:var(--moss)"></span>エサ</span>
+      <span><span class="sq" style="background:var(--wall-lit)"></span>壁</span>
+    </div>
+
+    <div class="controls" id="controls">
+      <div class="ctrl-btn c-up" data-dr="-1" data-dc="0">▲</div>
+      <div class="ctrl-btn c-left" data-dr="0" data-dc="-1">◀</div>
+      <div class="ctrl-btn c-down" data-dr="1" data-dc="0">▼</div>
+      <div class="ctrl-btn c-right" data-dr="0" data-dc="1">▶</div>
+    </div>
+    <div class="hint">矢印キー / WASD またはボタンで移動。PC・スマホどちらでも操作できます。</div>
   </div>
-  <div class="hint">矢印キー / WASD またはボタンで移動。PC・スマホどちらでも操作できます。</div>
 </div>
 
 <script>
@@ -378,9 +408,10 @@
   const IDLE_DRAIN_PER_MS = 50 / 60000;   // 50dmg / 60sec (== 5dmg / 360f at 60fps)
   const EAT_STUN_FRAMES = 30;
 
-  // ---- Admin detection (must exist before loadRecords()/exportCsv() run) ----
+  // ---- Admin detection ----
   const params = new URLSearchParams(location.search);
   const isAdmin = params.get('admin') === '1';
+
   const canvas = document.getElementById('board');
   const ctx = canvas.getContext('2d');
 
@@ -397,14 +428,15 @@
   const staminaFillEl = document.getElementById('staminaFill');
   const staminaTextEl = document.getElementById('staminaText');
   const stunIndicatorEl = document.getElementById('stunIndicator');
-  const overlayEl = document.getElementById('overlay');
+  const titleScreenEl = document.getElementById('titleScreen');
+  const resultScreenEl = document.getElementById('resultScreen');
+  const gameAreaEl = document.getElementById('gameArea');
   const overlayTitleEl = document.getElementById('overlayTitle');
   const overlayTextEl = document.getElementById('overlayText');
   const statNameEl = document.getElementById('statName');
   const statScoreEl = document.getElementById('statScore');
   const statChangesEl = document.getElementById('statChanges');
   const statDistanceEl = document.getElementById('statDistance');
-  const titleScreenEl = document.getElementById('titleScreen');
   const adminBadgeEl = document.getElementById('adminBadge');
   const playerNameInput = document.getElementById('playerNameInput');
   const modeStaticBtn = document.getElementById('modeStaticBtn');
@@ -418,12 +450,7 @@
   const recordsBlockEl = document.getElementById('recordsBlock');
   const recordsLabelEl = document.getElementById('recordsLabel');
   const recordsListEl = document.getElementById('recordsList');
-　const exportCsvBtn = document.getElementById('exportCsvBtn');
-
-  if(isAdmin){
-    adminBadgeEl.classList.add('show');
-    recordsBlockEl.classList.add('admin-mode');
-  }
+  const exportCsvBtn = document.getElementById('exportCsvBtn');
 
   let wallGrid, player, foods, foodCount, foodEaten, distanceTraveled, mapNumber;
   let rawStamina, stamina, timeLeft, timerHandle, animHandle, gameOver, startTime, frameLast;
@@ -453,7 +480,6 @@
     return arr;
   }
 
-  // wallGrid[gr][gc] === true -> solid wall tile. Cells live at odd,odd positions.
   function buildMaze(){
     const grid = Array.from({length:GRID}, () => Array(GRID).fill(true));
     const visited = Array.from({length:N}, () => Array(N).fill(false));
@@ -506,14 +532,13 @@
     return list;
   }
 
-  // All stamina changes flow through here so we can track true (uncapped) HP.
   function applyStaminaDelta(delta){
     rawStamina += delta;
     if(rawStamina < 0) rawStamina = 0;
     stamina = Math.min(rawStamina, STAMINA_CAP);
     if(rawStamina > STAMINA_CAP){
       console.log(
-        '[心理学迷路 debug] overflow HP — raw:', Math.round(rawStamina*10)/10,
+        '[OFT迷宮 debug] overflow HP — raw:', Math.round(rawStamina*10)/10,
         ' displayed cap:', STAMINA_CAP,
         ' overflow amount:', Math.round((rawStamina-STAMINA_CAP)*10)/10
       );
@@ -528,6 +553,7 @@
       console.error('record save failed', e);
     }
   }
+
   async function fetchAllRecords(){
     const listRes = await window.storage.list('runs:', true);
     const keys = (listRes && listRes.keys) ? listRes.keys : [];
@@ -609,20 +635,16 @@
       return;
     }
 
-  if(records.length === 0){
-    alert('記録がありません');
-    return;
-  }
-    
-  records.sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
+    if(records.length === 0){
+      alert('記録がありません');
+      return;
+    }
 
-  // CSV ヘッダー
-  let csv = 'name,score,mapChanges,distance,foodEaten,timestamp\n';
+    records.sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
 
-  // CSV 本体
-  records.forEach(rec => {
-    csv += [
-          const dateStr = rec.timestamp ? new Date(rec.timestamp).toISOString() : '';
+    let csv = 'name,score,mapChanges,distance,foodEaten,timestamp,datetime\n';
+    records.forEach(rec => {
+      const dateStr = rec.timestamp ? new Date(rec.timestamp).toISOString() : '';
       csv += [
         csvField(rec.name),
         csvField(rec.score),
@@ -634,17 +656,16 @@
       ].join(',') + '\n';
     });
 
-
-  // ダウンロード処理
-  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'oft_maze_records_' + Date.now() + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  URL.revokeObjectURL(url);
-}
+    const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'oft_maze_records_' + Date.now() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, ch => ({
@@ -656,7 +677,8 @@
     screenState = 'title';
     gameOver = true;
     if(timerHandle) clearInterval(timerHandle);
-    overlayEl.classList.remove('show');
+    gameAreaEl.classList.remove('show');
+    resultScreenEl.classList.remove('show');
     titleScreenEl.classList.add('show');
     loadRecords();
   }
@@ -680,8 +702,9 @@
     startTime = performance.now();
     frameLast = null;
     updateHud();
-    overlayEl.classList.remove('show');
     titleScreenEl.classList.remove('show');
+    resultScreenEl.classList.remove('show');
+    gameAreaEl.classList.add('show');
 
     if(timerHandle) clearInterval(timerHandle);
     timerHandle = setInterval(() => {
@@ -734,7 +757,6 @@
   function endGame(won){
     gameOver = true;
     clearInterval(timerHandle);
-    overlayEl.classList.add('show');
     const score = Math.round(stamina);
     const mapChanges = mapNumber - 1;
 
@@ -752,6 +774,9 @@
     statScoreEl.textContent = score;
     statChangesEl.textContent = mapChanges;
     statDistanceEl.textContent = distanceTraveled;
+
+    gameAreaEl.classList.remove('show');
+    resultScreenEl.classList.add('show');
 
     saveRecord({
       name: playerName,
@@ -903,22 +928,12 @@
     tryMove(m[0], m[1]);
   });
 
+  // ---- Wire up all UI controls first (before anything storage-related runs) ----
   document.getElementById('controls').addEventListener('click', (e) => {
     const btn = e.target.closest('.ctrl-btn');
     if(!btn) return;
     tryMove(parseInt(btn.dataset.dr,10), parseInt(btn.dataset.dc,10));
   });
-
-const params = new URLSearchParams(location.search);
-const isAdmin = params.get('admin') === '1';
-
-const exportCsvBtn = document.getElementById('exportCsvBtn');
-if(exportCsvBtn){  
-  exportCsvBtn.style.display = isAdmin ? 'block' : 'none';
-  if(isAdmin){
-  exportCsvBtn.addEventListener('click', exportCsv);
- }
-}
 
   fieldChangeBtn.addEventListener('click', changeField);
   restartBtn.addEventListener('click', initGame);
@@ -931,6 +946,15 @@ if(exportCsvBtn){
       modeButtons.forEach(b => b.classList.toggle('active', b === btn));
     });
   });
+
+  // Admin-only UI: CSS defaults #exportCsvBtn to display:none, so this only
+  // ever needs to ADD visibility for admins — never remove it for non-admins.
+  if(isAdmin){
+    adminBadgeEl.classList.add('show');
+    recordsBlockEl.classList.add('admin-mode');
+    exportCsvBtn.classList.add('show');
+    exportCsvBtn.addEventListener('click', exportCsv);
+  }
 
   loadRecords();
 })();
