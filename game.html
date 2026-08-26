@@ -405,6 +405,7 @@
   const statChangesEl = document.getElementById('statChanges');
   const statDistanceEl = document.getElementById('statDistance');
   const titleScreenEl = document.getElementById('titleScreen');
+  const adminBadgeEl = document.getElementById('adminBadge');
   const playerNameInput = document.getElementById('playerNameInput');
   const modeStaticBtn = document.getElementById('modeStaticBtn');
   const modeDrainBtn = document.getElementById('modeDrainBtn');
@@ -417,6 +418,12 @@
   const recordsBlockEl = document.getElementById('recordsBlock');
   const recordsLabelEl = document.getElementById('recordsLabel');
   const recordsListEl = document.getElementById('recordsList');
+　const exportCsvBtn = document.getElementById('exportCsvBtn');
+
+  if(isAdmin){
+    adminBadgeEl.classList.add('show');
+    recordsBlockEl.classList.add('admin-mode');
+  }
 
   let wallGrid, player, foods, foodCount, foodEaten, distanceTraveled, mapNumber;
   let rawStamina, stamina, timeLeft, timerHandle, animHandle, gameOver, startTime, frameLast;
