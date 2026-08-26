@@ -528,30 +528,57 @@
       console.error('record save failed', e);
     }
   }
+  async function fetchAllRecords(){
+    const listRes = await window.storage.list('runs:', true);
+    const keys = (listRes && listRes.keys) ? listRes.keys : [];
+    const records = [];
+    for(const k of keys){
+      try{
+        const r = await window.storage.get(k, true);
+        if(r && r.value) records.push(JSON.parse(r.value));
+      }catch(e){ /* skip unreadable entries */ }
+    }
+    return records;
+  }
 
   async function loadRecords(){
     recordsListEl.textContent = '読み込み中…';
     try{
-      const listRes = await window.storage.list('runs:', true);
-      const keys = (listRes && listRes.keys) ? listRes.keys : [];
-      if(keys.length === 0){
+      const records = await fetchAllRecords();
+
+      if(isAdmin){
+        recordsLabelEl.textContent = '全プレイヤーの記録（管理者ビュー・全' + records.length + '件）';
+        recordsListEl.className = 'records-list admin-list';
+        if(records.length === 0){
+          recordsListEl.textContent = 'まだ記録がありません。';
+          return;
+        }
+        records.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+        recordsListEl.innerHTML = '';
+        records.forEach(rec => {
+          const row = document.createElement('div');
+          row.className = 'rec-row';
+          const dateStr = rec.timestamp ? new Date(rec.timestamp).toLocaleString('ja-JP') : '-';
+          row.innerHTML =
+            '<span class="rn">' + escapeHtml(rec.name || '名無し') + '</span>' +
+            '<span class="rs">HP ' + (rec.score ?? '-') +
+              ' ／ 変更' + (rec.mapChanges ?? '-') + '回' +
+              ' ／ 距離' + (rec.distance ?? '-') +
+              ' ／ 捕食' + (rec.foodEaten ?? '-') + '匹</span>' +
+            '<span class="rt">' + dateStr + '</span>';
+          recordsListEl.appendChild(row);
+        });
+        return;
+      }
+
+      recordsLabelEl.textContent = '全プレイヤーの記録（共有保存）';
+      recordsListEl.className = 'records-list';
+      if(records.length === 0){
         recordsListEl.textContent = 'まだ記録がありません。';
         return;
       }
-      const recent = keys.slice(-50);
-      const records = [];
-      for(const k of recent){
-        try{
-          const r = await window.storage.get(k, true);
-          if(r && r.value) records.push(JSON.parse(r.value));
-        }catch(e){ /* skip unreadable entries */ }
-      }
-      records.sort((a,b) => b.score - a.score);
+      records.sort((a,b) => (b.score||0) - (a.score||0));
       const top = records.slice(0,5);
-      if(top.length === 0){
-        recordsListEl.textContent = 'まだ記録がありません。';
-        return;
-      }
       recordsListEl.innerHTML = '';
       top.forEach(rec => {
         const row = document.createElement('div');
@@ -566,22 +593,28 @@
       recordsListEl.textContent = '記録を読み込めませんでした。';
     }
   }
-async function exportCsv(){
-  const listRes = await window.storage.list('runs:', true);
-  const keys = (listRes && listRes.keys) ? listRes.keys : [];
-  const records = [];
 
-  for(const k of keys){
-    try{
-      const r = await window.storage.get(k, true);
-      if(r && r.value) records.push(JSON.parse(r.value));
-    }catch(e){}
+  function csvField(v){
+    const s = (v === undefined || v === null) ? '' : String(v);
+    return '"' + s.replace(/"/g, '""') + '"';
   }
+
+  async function exportCsv(){
+    let records;
+    try{
+      records = await fetchAllRecords();
+    }catch(e){
+      console.error('csv export failed', e);
+      alert('記録の読み込みに失敗しました');
+      return;
+    }
 
   if(records.length === 0){
     alert('記録がありません');
     return;
   }
+    
+  records.sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
 
   // CSV ヘッダー
   let csv = 'name,score,mapChanges,distance,foodEaten,timestamp\n';
@@ -589,21 +622,26 @@ async function exportCsv(){
   // CSV 本体
   records.forEach(rec => {
     csv += [
-      `"${rec.name}"`,
-      rec.score,
-      rec.mapChanges,
-      rec.distance,
-      rec.foodEaten,
-      rec.timestamp
-    ].join(',') + '\n';
-  });
+          const dateStr = rec.timestamp ? new Date(rec.timestamp).toISOString() : '';
+      csv += [
+        csvField(rec.name),
+        csvField(rec.score),
+        csvField(rec.mapChanges),
+        csvField(rec.distance),
+        csvField(rec.foodEaten),
+        csvField(rec.timestamp),
+        csvField(dateStr)
+      ].join(',') + '\n';
+    });
+
 
   // ダウンロード処理
-  const blob = new Blob([csv], {type:'text/csv'});
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'records.csv';
+  a.download = 'oft_maze_records_' + Date.now() + '.csv';
+  document.body.appendChild(a);
   a.click();
   URL.revokeObjectURL(url);
 }
