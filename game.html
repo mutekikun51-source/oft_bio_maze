@@ -915,9 +915,7 @@ const isAdmin = params.get('admin') === '1';
 const exportCsvBtn = document.getElementById('exportCsvBtn');
 if(exportCsvBtn){  
   exportCsvBtn.style.display = isAdmin ? 'block' : 'none';
-
   if(isAdmin){
-   
   exportCsvBtn.addEventListener('click', exportCsv);
  }
 }
